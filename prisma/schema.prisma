@@ -1,0 +1,122 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Receipt {
+  si            Int          @id @default(autoincrement())
+  amount        Int
+  amountInWords String
+  from          String
+  by            String //cash, pay order, bank draft, cheque, DD# 
+  bank          String
+  branch        String
+  date          DateTime
+  appointment   Appointment?
+  appointmentId Int?
+}
+
+model Prescription{
+  id           Int      @id @default(autoincrement())
+  user         User     @relation(fields: [userId], references: [id])
+  userId       String
+
+  drug       Drug[]
+
+
+
+  additional String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+}
+
+model Drug{
+  id           Int      @id @default(autoincrement())
+  drug    String
+  dosage String
+  frequency String
+  //relation
+  prescription Prescription @relation(fields: [prescriptionId], references: [id])
+  prescriptionId Int
+}
+
+model Appointment {
+  id           Int      @id @default(autoincrement())
+  user         User     @relation(fields: [userId], references: [id])
+  userId       String
+  service      String //Rx -> prescription, Bp -> blood pressure, Wt -> weight, Fw -> follow up, C -> consultation, E -> emergency, S -> seasonal (asthma), Tp - temperature
+  moneyReceipt Receipt? @relation(fields: [receiptId], references: [si])
+  receiptId    Int?     @unique
+  //diagnosis String
+  //prescription String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  date String //date of appointment
+  time String //from 8:30am to 4:30pm
+
+  updated Boolean @default(false) //if it is marked as done, it will be true
+  //so it shows up for user if appointment gets rescheduled
+}
+
+model Service {
+  id    Int    @id @default(autoincrement())
+  alias String
+  name  String
+}
+
+model Faq {
+  id       Int    @id @default(autoincrement())
+  question String
+  answer   String
+}
+
+model User {
+  //for authentication
+  id           String    @id @unique
+  username     String    @unique
+  auth_session Session[]
+  key          Key[]
+  //userinfo - attributes
+
+  email     String
+  phone     String
+  studentId String @unique
+
+  name       String?
+  department String?
+  dob        DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  appointments Appointment[]
+  prescriptions Prescription[]
+}
+
+model Session {
+  id             String @id @unique
+  user_id        String
+  active_expires BigInt
+  idle_expires   BigInt
+  user           User   @relation(references: [id], fields: [user_id], onDelete: Cascade)
+
+  @@index([user_id])
+}
+
+model Key {
+  id              String  @id @unique
+  hashed_password String?
+  user_id         String
+  user            User    @relation(references: [id], fields: [user_id], onDelete: Cascade)
+
+  @@index([user_id])
+}
